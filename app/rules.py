@@ -11,7 +11,7 @@ from app.twse_client import TwseClient
 
 
 RULE_RE = re.compile(
-    r"^\s*(?P<code>\d{4,6})\s*(?:(?P<metric>price|價格|volume|量|成交量)\s*)?"
+    r"^\s*(?P<identifier>.+?)\s*(?P<metric>價|價格|price|量|成交量|volume)\s*"
     r"(?P<operator>>=|<=|>|<|=)\s*(?P<threshold>\d+(?:\.\d+)?)\s*$",
     re.IGNORECASE,
 )
@@ -45,15 +45,24 @@ def create_rule_from_text(
 ) -> str:
     match = RULE_RE.match(text)
     if not match:
-        metric_word = "價格" if default_metric == "price" else "成交量"
         return (
             f"格式我還讀不懂。請輸入像這樣：\n"
-            f"2330 >= 600\n"
-            f"如果是{metric_word}提醒，按選單後直接輸入股票代號、條件和門檻即可。"
+            f"2330 價 >= 600\n"
+            f"2330 量 >= 50000\n"
+            f"目前需要明確寫出「價」或「量」。"
         )
 
-    code = match.group("code")
-    metric = normalize_metric(match.group("metric"), default_metric)
+    identifier = match.group("identifier").strip()
+    if not re.fullmatch(r"\d{4,6}", identifier):
+        return (
+            f"我讀到的標的是「{identifier}」，但目前這版只能用股票代號建立提醒。\n"
+            f"公司名稱輸入會在股票主檔比對功能完成後支援。請先輸入像這樣：\n"
+            f"2330 價 >= 600\n"
+            f"2330 量 >= 50000"
+        )
+
+    code = identifier
+    metric = normalize_metric(match.group("metric"))
     operator = normalize_operator(match.group("operator"))
     threshold = float(match.group("threshold"))
 
@@ -118,9 +127,7 @@ def delete_rule(db: Session, user_id: str, text: str) -> str | None:
     return f"已刪除 #{match.group('id')}。"
 
 
-def normalize_metric(metric: str | None, default_metric: str) -> str:
-    if metric is None:
-        return default_metric
+def normalize_metric(metric: str) -> str:
     return "volume" if metric.lower() in {"volume", "量", "成交量"} else "price"
 
 

@@ -12,8 +12,8 @@ logger = logging.getLogger(__name__)
 
 HELP_TEXT = (
     "可以用下方圖文選單設定提醒。\n\n"
-    "價格提醒範例：2330 >= 600\n"
-    "成交量提醒範例：2330 >= 50000\n"
+    "價格提醒範例：2330 價 >= 600\n"
+    "成交量提醒範例：2330 量 >= 50000\n"
     "刪除提醒範例：刪除 12\n\n"
     "機器人會在台股開盤時段約每 30 秒檢查一次，觸發後會通知你並停用該提醒。"
 )
@@ -55,10 +55,10 @@ class BotService:
         data = postback.get("data") or ""
         if data == "action=add_price":
             set_mode(db, user_id, "price")
-            self.line.reply_text(reply_token, "請輸入價格提醒，例如：2330 >= 600")
+            self.line.reply_text(reply_token, "請輸入價格提醒，例如：2330 價 >= 600")
         elif data == "action=add_volume":
             set_mode(db, user_id, "volume")
-            self.line.reply_text(reply_token, "請輸入成交量提醒，例如：2330 >= 50000")
+            self.line.reply_text(reply_token, "請輸入成交量提醒，例如：2330 量 >= 50000")
         elif data == "action=list":
             self.line.reply_text(reply_token, list_rules(db, user_id))
         else:
