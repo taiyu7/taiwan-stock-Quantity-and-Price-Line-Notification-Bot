@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import AlertRule, UserState
+from app.stock_master import ResolveResult, Stock, StockMasterClient
 from app.twse_client import TwseClient
 
 
@@ -42,6 +43,7 @@ def create_rule_from_text(
     text: str,
     default_metric: str,
     twse: TwseClient,
+    stock_master: StockMasterClient | None = None,
 ) -> str:
     match = RULE_RE.match(text)
     if not match:
@@ -53,28 +55,29 @@ def create_rule_from_text(
         )
 
     identifier = match.group("identifier").strip()
-    if not re.fullmatch(r"\d{4,6}", identifier):
-        return (
-            f"我讀到的標的是「{identifier}」，但目前這版只能用股票代號建立提醒。\n"
-            f"公司名稱輸入會在股票主檔比對功能完成後支援。請先輸入像這樣：\n"
-            f"2330 價 >= 600\n"
-            f"2330 量 >= 50000"
-        )
-
-    code = identifier
     metric = normalize_metric(match.group("metric"))
     operator = normalize_operator(match.group("operator"))
     threshold = float(match.group("threshold"))
 
-    quote = twse.fetch_quote(code)
+    stock_result = resolve_stock(db, identifier, stock_master)
+    if stock_result.status == "ambiguous":
+        return build_ambiguous_message(identifier, stock_result.candidates)
+    if stock_result.status == "not_found":
+        return f"找不到「{identifier}」對應的股票，請確認股名或股號是否正確。"
+
+    stock = stock_result.stock
+    if stock is None:
+        return f"找不到「{identifier}」對應的股票，請確認股名或股號是否正確。"
+
+    quote = twse.fetch_quote(stock.code, stock.market or None)
     if quote is None:
-        return f"找不到 {code} 的即時資料，請確認股票代號是否正確。"
+        return f"找不到 {stock.display_name} 的即時資料，請確認標的是否仍可交易。"
 
     rule = AlertRule(
         line_user_id=user_id,
-        stock_code=code,
-        stock_name=quote.name,
-        market=quote.market,
+        stock_code=stock.code,
+        stock_name=stock.name or quote.name,
+        market=stock.market or quote.market,
         metric=metric,
         operator=operator,
         threshold=threshold,
@@ -87,10 +90,27 @@ def create_rule_from_text(
     unit = "元" if metric == "price" else "張"
     clear_mode(db, user_id)
     return (
-        f"已建立提醒：{quote.name}({code})\n"
+        f"已建立提醒：{rule.stock_name}({rule.stock_code})\n"
         f"{label} {operator} {format_number(threshold)} {unit}\n"
         f"目前{label}：{format_number(rule.last_value or 0)} {unit}"
     )
+
+
+def resolve_stock(db: Session, identifier: str, stock_master: StockMasterClient | None) -> ResolveResult:
+    if stock_master:
+        result = stock_master.resolve(identifier, db)
+        if result.status == "found" or not re.fullmatch(r"\d{4,6}", identifier):
+            return result
+    if re.fullmatch(r"\d{4,6}", identifier):
+        return ResolveResult.found(Stock(code=identifier, name="", market=""))
+    return ResolveResult.not_found()
+
+
+def build_ambiguous_message(identifier: str, candidates: tuple[Stock, ...]) -> str:
+    lines = [f"「{identifier}」找到多個可能標的，請改用股票代號："]
+    for stock in candidates[:10]:
+        lines.append(f"- {stock.display_name}")
+    return "\n".join(lines)
 
 
 def list_rules(db: Session, user_id: str) -> str:

@@ -48,12 +48,14 @@ https://your-cloud-domain.example.com/line/webhook
 
 ```text
 2330 價 >= 600
+台積電 價 >= 600
 ```
 
 成交量提醒：
 
 ```text
 2330 量 >= 50000
+台積電 量 >= 50000
 ```
 
 查看提醒：
@@ -67,6 +69,17 @@ https://your-cloud-domain.example.com/line/webhook
 ```text
 刪除 12
 ```
+
+股票標的可以輸入代號或公司簡稱。系統會用官方上市/上櫃公司基本資料比對股名與股號；如果名稱找到多個候選，會要求改用股票代號，避免追蹤錯標的。
+
+## 股票主檔
+
+公司名稱與股票代號比對使用官方公開資料：
+
+- 上市公司基本資料：TWSE OpenAPI `t187ap03_L`
+- 上櫃股票基本資料：TPEx OpenAPI `mopsfin_t187ap03_O`
+
+系統會把股票主檔存進資料庫的 `stock_master_entries`，並用 `sync_states` 記錄同步時間。預設一天更新一次，也就是 `STOCK_MASTER_CACHE_SECONDS=86400`。如果官方 API 暫時無法連線，系統會沿用資料庫中最後一次成功同步的股票主檔。
 
 ## 部署
 
@@ -85,6 +98,7 @@ APP_BASE_URL=https://your-railway-domain.up.railway.app
 DATABASE_URL=${{Postgres.DATABASE_URL}}
 CHECK_INTERVAL_SECONDS=30
 ALERT_COOLDOWN_SECONDS=300
+STOCK_MASTER_CACHE_SECONDS=86400
 TIMEZONE=Asia/Taipei
 ENABLE_SCHEDULER=true
 ```
@@ -99,6 +113,7 @@ Railway 畫面可能會從 `.env.example` 顯示 Suggested Variables。請把預
 - `LINE_CHANNEL_SECRET`: LINE Developers 的 Channel secret。
 - `APP_BASE_URL`: Railway 產生的公開網址，例如 `https://web-production-xxxx.up.railway.app`。
 - `DATABASE_URL`: 建議使用 PostgreSQL service 的 `${{Postgres.DATABASE_URL}}`，正式環境不要使用 SQLite。
+- `STOCK_MASTER_CACHE_SECONDS`: 股票主檔快取秒數，預設 `86400`，也就是一天讀取一次官方上市/上櫃公司清單。
 
 4. 產生公開網域後，到 LINE Developers 設定 Webhook URL：
 

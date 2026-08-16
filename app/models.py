@@ -41,3 +41,24 @@ class AlertRule(Base):
     triggered_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     last_checked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     last_value: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+
+class StockMasterEntry(Base):
+    __tablename__ = "stock_master_entries"
+    __table_args__ = (
+        UniqueConstraint("market", "code", name="uq_stock_master_market_code"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    code: Mapped[str] = mapped_column(String(16), index=True)
+    name: Mapped[str] = mapped_column(String(64), index=True)
+    market: Mapped[str] = mapped_column(String(8), index=True)
+    full_name: Mapped[str] = mapped_column(String(128), default="")
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class SyncState(Base):
+    __tablename__ = "sync_states"
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

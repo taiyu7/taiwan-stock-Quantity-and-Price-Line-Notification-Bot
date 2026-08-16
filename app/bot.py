@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.line_client import LineClient
 from app.rules import create_rule_from_text, delete_rule, get_mode, list_rules, set_mode
+from app.stock_master import StockMasterClient
 from app.twse_client import TwseClient
 
 
@@ -13,6 +14,7 @@ logger = logging.getLogger(__name__)
 HELP_TEXT = (
     "可以用下方圖文選單設定提醒。\n\n"
     "價格提醒範例：2330 價 >= 600\n"
+    "股名也可以：台積電 價 >= 600\n"
     "成交量提醒範例：2330 量 >= 50000\n"
     "刪除提醒範例：刪除 12\n\n"
     "機器人會在台股開盤時段約每 30 秒檢查一次，觸發後會通知你並停用該提醒。"
@@ -23,6 +25,7 @@ class BotService:
     def __init__(self) -> None:
         self.line = LineClient()
         self.twse = TwseClient()
+        self.stock_master = StockMasterClient()
 
     def handle_event(self, db: Session, event: dict[str, Any]) -> None:
         event_type = event.get("type")
@@ -79,7 +82,7 @@ class BotService:
             return
 
         mode = get_mode(db, user_id) or "price"
-        message = create_rule_from_text(db, user_id, text, mode, self.twse)
+        message = create_rule_from_text(db, user_id, text, mode, self.twse, self.stock_master)
         self.line.reply_text(reply_token, message)
 
 

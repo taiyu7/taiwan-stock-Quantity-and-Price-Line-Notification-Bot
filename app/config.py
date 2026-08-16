@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     app_base_url: str = "http://localhost:8000"
     check_interval_seconds: int = 30
     alert_cooldown_seconds: int = 300
+    stock_master_cache_seconds: int = 86400
     timezone: str = "Asia/Taipei"
     enable_scheduler: bool = True
 
