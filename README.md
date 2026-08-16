@@ -89,6 +89,17 @@ TIMEZONE=Asia/Taipei
 ENABLE_SCHEDULER=true
 ```
 
+LINE 的 `LINE_CHANNEL_ACCESS_TOKEN` 是機器人呼叫 LINE API 的通行憑證，例如用來回覆訊息、推播通知、建立圖文選單。`LINE_CHANNEL_SECRET` 是 LINE webhook 簽章驗證用的密鑰，用來確認打進 `/line/webhook` 的請求真的來自 LINE。
+
+不要把 token 或 secret 貼到 README、GitHub issue、聊天紀錄或任何公開地方；只放在 Railway Variables、正式環境 secret manager 或本機 `.env`。
+
+Railway 畫面可能會從 `.env.example` 顯示 Suggested Variables。請把預設值換成正式值：
+
+- `LINE_CHANNEL_ACCESS_TOKEN`: LINE Developers 的 Channel access token。
+- `LINE_CHANNEL_SECRET`: LINE Developers 的 Channel secret。
+- `APP_BASE_URL`: Railway 產生的公開網址，例如 `https://web-production-xxxx.up.railway.app`。
+- `DATABASE_URL`: 建議使用 PostgreSQL service 的 `${{Postgres.DATABASE_URL}}`，正式環境不要使用 SQLite。
+
 4. 產生公開網域後，到 LINE Developers 設定 Webhook URL：
 
 ```text
@@ -96,6 +107,22 @@ https://your-railway-domain.up.railway.app/line/webhook
 ```
 
 專案已包含 `railway.toml`，Railway 會使用 Dockerfile 建置，並以 `/health` 作為部署健康檢查。
+
+#### Railway 疑難排解
+
+如果 Deployments 顯示 `Network > Healthcheck` 失敗，先點該 deployment 的 `View logs`，再看 `Deploy Logs`。Build 成功但 healthcheck 失敗，通常代表容器啟動後 app 沒有成功監聽 Railway 指定的 port，或啟動時發生 exception。
+
+曾遇過的錯誤：
+
+```text
+Error: Invalid value for '--port': '${PORT:-8000}' is not a valid integer.
+```
+
+原因是 Railway 使用到舊的 start command，把 `${PORT:-8000}` 原封不動傳給 `uvicorn --port`。目前專案已改成 `python -m app.server`，由 Python 讀取 `PORT`。如果 Railway 還出現這個錯誤，到 service 的 Settings 檢查 Start Command，清掉舊指令或設定為：
+
+```text
+python -m app.server
+```
 
 ### Docker
 
