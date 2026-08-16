@@ -47,13 +47,13 @@ https://your-cloud-domain.example.com/line/webhook
 價格提醒：
 
 ```text
-2330 >= 600
+2330 價 >= 600
 ```
 
 成交量提醒：
 
 ```text
-2330 >= 50000
+2330 量 >= 50000
 ```
 
 查看提醒：
