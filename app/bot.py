@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -6,6 +7,8 @@ from app.line_client import LineClient
 from app.rules import create_rule_from_text, delete_rule, get_mode, list_rules, set_mode
 from app.twse_client import TwseClient
 
+
+logger = logging.getLogger(__name__)
 
 HELP_TEXT = (
     "可以用下方圖文選單設定提醒。\n\n"
@@ -25,6 +28,12 @@ class BotService:
         event_type = event.get("type")
         reply_token = event.get("replyToken")
         user_id = (event.get("source") or {}).get("userId")
+        logger.info(
+            "Handling LINE event type=%s user=%s has_reply_token=%s",
+            event_type,
+            mask_user_id(user_id),
+            bool(reply_token),
+        )
         if not reply_token or not user_id:
             return
 
@@ -72,3 +81,9 @@ class BotService:
         mode = get_mode(db, user_id) or "price"
         message = create_rule_from_text(db, user_id, text, mode, self.twse)
         self.line.reply_text(reply_token, message)
+
+
+def mask_user_id(user_id: str | None) -> str:
+    if not user_id:
+        return ""
+    return f"{user_id[:6]}...{user_id[-4:]}"

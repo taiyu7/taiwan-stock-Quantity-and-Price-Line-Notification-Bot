@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import logging
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from sqlalchemy.orm import Session
@@ -11,6 +12,8 @@ from app.scheduler import AlertScheduler
 
 
 settings = get_settings()
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 bot = BotService()
 line = LineClient()
 scheduler = AlertScheduler()
@@ -50,9 +53,11 @@ async def line_webhook(
 ) -> dict[str, str]:
     body = await request.body()
     if not line.verify_signature(body, x_line_signature):
+        logger.warning("Rejected LINE webhook because signature verification failed")
         raise HTTPException(status_code=403, detail="Invalid LINE signature")
 
     payload = await request.json()
+    logger.info("Received LINE webhook events=%s", len(payload.get("events", [])))
     for event in payload.get("events", []):
         bot.handle_event(db, event)
     return {"status": "ok"}

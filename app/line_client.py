@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import hmac
+import logging
 from typing import Any
 
 import requests
@@ -9,6 +10,7 @@ from app.config import get_settings
 
 
 LINE_API_BASE = "https://api.line.me/v2/bot"
+logger = logging.getLogger(__name__)
 
 
 class LineClient:
@@ -50,4 +52,6 @@ class LineClient:
             json=payload,
             timeout=15,
         )
+        if response.status_code >= 400:
+            logger.error("LINE API request failed path=%s status=%s body=%s", path, response.status_code, response.text)
         response.raise_for_status()
