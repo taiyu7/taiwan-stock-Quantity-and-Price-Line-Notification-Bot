@@ -70,6 +70,33 @@ https://your-cloud-domain.example.com/line/webhook
 
 ## 部署
 
+### Railway
+
+建議第一版先部署在 Railway，因為這個機器人需要一個常駐 Webhook 服務，同時背景每 30 秒檢查一次條件。
+
+1. 將 GitHub repo 連到 Railway。
+2. 新增 PostgreSQL service。
+3. 在 Web service 設定環境變數：
+
+```env
+LINE_CHANNEL_ACCESS_TOKEN=...
+LINE_CHANNEL_SECRET=...
+APP_BASE_URL=https://your-railway-domain.up.railway.app
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+CHECK_INTERVAL_SECONDS=30
+ALERT_COOLDOWN_SECONDS=300
+TIMEZONE=Asia/Taipei
+ENABLE_SCHEDULER=true
+```
+
+4. 產生公開網域後，到 LINE Developers 設定 Webhook URL：
+
+```text
+https://your-railway-domain.up.railway.app/line/webhook
+```
+
+專案已包含 `railway.toml`，Railway 會使用 Dockerfile 建置，並以 `/health` 作為部署健康檢查。
+
 ### Docker
 
 ```bash
