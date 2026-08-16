@@ -106,6 +106,8 @@ Railway 畫面可能會從 `.env.example` 顯示 Suggested Variables。請把預
 https://your-railway-domain.up.railway.app/line/webhook
 ```
 
+LINE 有兩個後台容易混淆：LINE Official Account Manager 和 LINE Developers。這個機器人的 webhook 必須在 LINE Developers 的 Messaging API channel 裡設定，並開啟 `Use webhook`。只在 Official Account Manager 設定 webhook 不會讓這個程式收到使用者訊息或圖文選單 postback。
+
 專案已包含 `railway.toml`，Railway 會使用 Dockerfile 建置，並以 `/health` 作為部署健康檢查。
 
 #### Railway 疑難排解
